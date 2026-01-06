@@ -1,0 +1,11 @@
+# AI Behavior Rules for this Project
+
+1. **Read Before Edit**: Always read the target file (or the relevant section) immediately before applying edits. This ensures you have the latest context and line numbers, preventing "target content not found" errors.
+
+2. **Fallback to Overwrite**: If a `replace_file_content` or `multi_replace_file_content` action fails due to a matching error, DO NOT retry blindly. Instead, immediately switch to using `write_to_file` to overwrite the file with the complete, corrected content.
+
+3. **Stop on Repetition (Anti-Loop)**: If a specific strategy or tool call fails twice in a row, STOP immediately. Do not try a third time. Instead, analyze why it failed, propose a completely different approach, or ask the user for guidance.
+
+4. **Focused Changes**: When addressing multiple requirements, tackle them in logical steps rather than trying to change everything in one massive edit, unless overwriting the file.
+
+5. **Verify**: After making changes, verify the outcome to ensure the code is syntactically correct and meets the user's request.

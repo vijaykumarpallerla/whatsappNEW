@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Bot Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}?v=3" rel="stylesheet">
+    <style>
+        /* Dashboard Specific Styles */
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 1rem 0;
+        }
+
+        .nav-brand {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.25rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-connected {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-disconnected {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .list-group-item {
+            border: 1px solid #e9edef;
+            margin-bottom: 0.5rem;
+            border-radius: 8px !important;
+            transition: all 0.2s;
+        }
+
+        .list-group-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(2px);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="#" class="nav-brand">
+                <i class="fab fa-whatsapp fa-lg"></i> Bot Manager
+            </a>
+
+            <!-- Stats in Navbar -->
+            <div class="d-flex align-items-center gap-4 mx-auto">
+                <div class="d-flex align-items-center gap-2"
+                    style="background: #f0f2f5; padding: 6px 16px; border-radius: 20px;">
+                    <span class="text-muted small fw-bold">TODAY</span>
+                    <span class="badge bg-success rounded-pill" id="today-count" style="font-size: 0.9rem;">0</span>
+                </div>
+                <div class="d-flex align-items-center gap-2"
+                    style="background: #f0f2f5; padding: 6px 16px; border-radius: 20px;">
+                    <span class="text-muted small fw-bold">TOTAL</span>
+                    <span class="badge bg-primary rounded-pill" id="total-count" style="font-size: 0.9rem;">0</span>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted small fw-bold"><i class="fas fa-user-circle me-1"></i> {{ username }}</span>
+                <a href="/logout" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                    <i class="fas fa-sign-out-alt me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        {% if message %}
+        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+            <i class="fas fa-check-circle me-2"></i> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <div class="row">
+            <!-- Left Column: Settings -->
+            <div class="col-lg-8">
+                <div class="custom-card mb-4">
+                    <form action="/save" method="POST" onkeydown="return event.key != 'Enter';">
+                        <!-- Email Settings -->
+                        <div class="mb-4">
+                            <div class="section-title"><i class="fas fa-envelope"></i> Email Settings</div>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Destination Email <span
+                                            class="text-danger">*</span></label>
+                                    <input type="email" class="form-control" name="dest_email"
+                                        value="{{ config.dest_email }}" placeholder="manager@company.com" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Settings -->
+                        <div class="mb-4">
+                            <div class="section-title"><i class="fas fa-robot"></i> AI Settings</div>
+                            <label class="form-label">Groq API Key <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-key text-muted"></i></span>
+                                <input type="password" class="form-control" name="groq_api_key"
+                                    value="{{ config.groq_api_key }}" placeholder="gsk_..." required>
+                            </div>
+                        </div>
+
+                        <!-- Auto-Allow Settings -->
+                        <div class="mb-4">
+                            <div class="section-title"><i class="fas fa-clock"></i> Auto-Allow Settings</div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="autoAllowToggle" name="auto_allow"
+                                    {% if config.auto_allow %}checked{% endif %} onchange="toggleTimeInputs()">
+                                <label class="form-check-label" for="autoAllowToggle">Enable Auto-Allow (IST
+                                    Time)</label>
+                            </div>
+
+                            <div id="timeInputs" class="row g-3" style="display: none;">
+                                <div class="col-6">
+                                    <label class="form-label small text-muted">Start Time (IST)</label>
+                                    <input type="time" class="form-control" name="start_time"
+                                        value="{{ config.start_time or '09:00' }}">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted">End Time (IST)</label>
+                                    <input type="time" class="form-control" name="end_time"
+                                        value="{{ config.end_time or '18:00' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Whitelist -->
+                        <div class="mb-4">
+                            <div class="section-title"><i class="fas fa-list-check"></i> Whitelisted Groups</div>
+                            <div id="whitelist-container">
+                                {% for item in config.allowed_jids %}
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text bg-light"><i
+                                            class="fas fa-users text-muted"></i></span>
+                                    <input type="text" class="form-control" name="jids" value="{{ item.jid }}" readonly>
+                                    <input type="text" class="form-control" name="names" value="{{ item.name }}"
+                                        placeholder="Group Name">
+                                    <button type="button" class="btn btn-outline-danger"
+                                        onclick="removeWhitelistItem(this, '{{ item.jid }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Add groups from the
+                                    Live Feed on the right.</small>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fas fa-save me-2"></i> Save Changes
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Column: Live Feed & QR -->
+            <div class="col-lg-4">
+                <!-- QR Code Card -->
+                <div class="custom-card mb-4 text-center">
+                    <h5 class="mb-3">WhatsApp Connection</h5>
+                    <div id="qr-container" class="mb-3"
+                        style="min-height: 250px; display: flex; align-items: center; justify-content: center;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <div id="connection-status" class="mb-2"></div>
+                    <p class="small text-muted mb-0" id="qr-instructions">Scan with WhatsApp to
+                        connect</p>
+                </div>
+
+                <!-- Live Groups Feed -->
+                <div class="custom-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Recent Groups</h5>
+                        <button class="btn btn-sm btn-light rounded-circle" onclick="fetchGroupMessages()">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div id="group-list" style="height: 400px; overflow-y: auto;">
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2 opacity-50"></i>
+                            <p class="small">Waiting for messages...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Message Modal -->
+    <div class="modal fade" id="messageModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="d-flex flex-column w-100">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="modal-title text-truncate pe-2" id="modalTitle">Message
+                                Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div id="modalActions" class="mt-2">
+                            <!-- Dynamic Buttons will appear here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <p id="modalText" style="white-space: pre-wrap;"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // --- Global Message Store ---
+        const messageStore = {};
+
+        // --- Auto-Allow UI Logic ---
+        function toggleTimeInputs() {
+            const toggle = document.getElementById('autoAllowToggle');
+            const inputs = document.getElementById('timeInputs');
+            if (toggle && inputs) {
+                if (toggle.checked) {
+                    inputs.style.display = 'flex';
+                } else {
+                    inputs.style.display = 'none';
+                }
+            }
+        }
+        // Run on load
+        toggleTimeInputs();
+
+        // --- QR Code & Status Logic ---
+        function updateStatus() {
+            fetch('/qr_status')
+                .then(response => {
+                    if (response.status === 401) window.location.href = '/login';
+                    return response.json();
+                })
+                .then(data => {
+                    const qrContainer = document.getElementById('qr-container');
+                    const statusBadge = document.getElementById('connection-status');
+                    const instructions = document.getElementById('qr-instructions');
+
+                    if (data.connected) {
+                        qrContainer.innerHTML = '<i class="fas fa-check-circle text-success fa-4x mb-2"></i>';
+                        statusBadge.innerHTML = '<span class="status-badge status-connected"><i class="fas fa-circle fa-xs"></i> Connected</span>';
+                        instructions.textContent = 'Bot is active and running';
+                    } else if (data.code) {
+                        qrContainer.innerHTML = `<img src="data:image/png;base64,${data.code}" class="img-fluid" style="max-width: 200px">`;
+                        statusBadge.innerHTML = '<span class="status-badge status-disconnected"><i class="fas fa-circle fa-xs"></i> Disconnected</span>';
+                        instructions.textContent = 'Open WhatsApp > Linked Devices > Link a Device';
+                    }
+                })
+                .catch(err => console.error("Status Error:", err));
+        }
+
+        // --- Group Messages Logic ---
+        function fetchGroupMessages() {
+            fetch('/group_messages')
+                .then(res => res.json())
+                .then(data => {
+                    const list = document.getElementById('group-list');
+                    list.innerHTML = '';
+
+                    if (Object.keys(data).length === 0) {
+                        list.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2 opacity-50"></i>
+                            <p class="small">No messages yet</p>
+                        </div>`;
+                        return;
+                    }
+
+                    for (const [groupId, info] of Object.entries(data)) {
+                        const isWhitelisted = info.whitelisted;
+                        const lastMsg = info.messages[info.messages.length - 1];
+
+                        // Store message data safely
+                        if (lastMsg) {
+                            messageStore[groupId] = {
+                                sender: lastMsg.sender,
+                                text: lastMsg.text,
+                                isWhitelisted: isWhitelisted
+                            };
+                        }
+
+                        const item = document.createElement('div');
+                        item.className = 'list-group-item p-3';
+                        item.id = `group-card-${groupId}`;
+                        item.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <div class="fw-bold text-truncate" style="max-width: 150px;">${groupId}</div>
+                                    <small class="text-muted">${lastMsg ? lastMsg.timestamp : ''}</small>
+                                </div>
+                                <div id="btn-container-${groupId}">
+                                    ${isWhitelisted
+                                ? `<button class="btn btn-sm btn-outline-danger rounded-pill" onclick="removeFromWhitelist('${groupId}')"><i class="fas fa-minus"></i> Remove</button>`
+                                : `<button class="btn btn-sm btn-primary rounded-pill" onclick="addToWhitelist('${groupId}')"><i class="fas fa-plus"></i> Add</button>`
+                            }
+                                </div>
+                            </div>
+                            <div class="p-2 bg-light rounded" style="cursor: pointer;" onclick="showFullMessage('${groupId}')">
+                                <p class="mb-0 small text-muted text-truncate">${lastMsg ? lastMsg.sender + ': ' + lastMsg.text : 'No text'}</p>
+                                <small class="text-primary" style="font-size: 0.75rem;">Click to read more</small>
+                            </div>
+                        `;
+                        list.appendChild(item);
+                    }
+                });
+        }
+
+        function showFullMessage(groupId) {
+            const msg = messageStore[groupId];
+            if (msg) {
+                // Update Title to Group ID
+                document.getElementById('modalTitle').textContent = groupId;
+                document.getElementById('modalText').textContent = msg.text;
+
+                // Update Actions
+                const actionsDiv = document.getElementById('modalActions');
+                if (msg.isWhitelisted) {
+                    actionsDiv.innerHTML = `<button class="btn btn-danger btn-sm w-100" onclick="removeFromWhitelist('${groupId}')"><i class="fas fa-minus me-2"></i>Remove from Whitelist</button>`;
+                } else {
+                    actionsDiv.innerHTML = `<button class="btn btn-success btn-sm w-100" onclick="addToWhitelist('${groupId}')"><i class="fas fa-plus me-2"></i>Add to Whitelist</button>`;
+                }
+
+                new bootstrap.Modal(document.getElementById('messageModal')).show();
+            }
+        }
+
+        // --- Sync Logic: Left Side Trash Button ---
+        function removeWhitelistItem(btn, groupId) {
+            // 1. Remove from Left Side UI
+            btn.parentElement.remove();
+
+            // 2. Update Right Side UI immediately (Visual Sync)
+            const btnContainer = document.getElementById(`btn-container-${groupId}`);
+            if (btnContainer) {
+                btnContainer.innerHTML = `<button class="btn btn-sm btn-primary rounded-pill" onclick="addToWhitelist('${groupId}')"><i class="fas fa-plus"></i> Add</button>`;
+            }
+
+            // Update store status if exists
+            if (messageStore[groupId]) {
+                messageStore[groupId].isWhitelisted = false;
+            }
+        }
+
+        function addToWhitelist(groupId) {
+            fetch('/add_to_whitelist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ group_id: groupId })
+            }).then(() => {
+                fetchGroupMessages();
+                location.reload(); // Reload to update form list
+            });
+        }
+
+        function removeFromWhitelist(groupId) {
+            fetch('/remove_from_whitelist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ group_id: groupId })
+            }).then(() => {
+                fetchGroupMessages();
+                location.reload(); // Reload to update form list
+            });
+        }
+
+        // Poll every 3 seconds
+        setInterval(updateStatus, 3000);
+        setInterval(fetchGroupMessages, 3000);
+        updateStatus();
+        fetchGroupMessages();
+
+        // --- Email Validation Logic ---
+        const destEmailInput = document.querySelector('input[name="dest_email"]');
+        if (destEmailInput) {
+            destEmailInput.addEventListener('blur', function (e) {
+                const email = e.target.value.toLowerCase().trim();
+                const allowedDomain = '@srimatech.com';
+                const allowedEmail = 'vijayypallerla@gmail.com';
+
+                // If email is not empty AND (doesn't end with domain AND isn't the specific allowed email)
+                if (email && !email.endsWith(allowedDomain) && email !== allowedEmail) {
+                    e.target.value = ''; // Silently clear the field
+                }
+            });
+        }
+
+        // --- Stats Logic (Navbar) ---
+        function updateStats() {
+            fetch('/stats')
+                .then(response => {
+                    if (response.ok) return response.json();
+                    throw new Error('Network response was not ok');
+                })
+                .then(data => {
+                    document.getElementById('today-count').innerText = data.today;
+                    document.getElementById('total-count').innerText = data.total;
+                })
+                .catch(err => console.log("Stats Error:", err));
+        }
+
+        setInterval(updateStats, 5000); // Update every 5 seconds
+        updateStats();
+    </script>
+</body>
+
+</html>

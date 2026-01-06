@@ -1,0 +1,12 @@
+flask
+psycopg2-binary
+neonize==0.3.12
+groq
+qrcode
+pillow
+requests
+protobuf
+google-auth-oauthlib
+google-api-python-client
+flask-session
+gunicorn

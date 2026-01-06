@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect WhatsApp</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="auth-card text-center">
+            <div class="auth-header mb-4">
+                <div class="auth-logo">
+                    <i class="fab fa-whatsapp"></i>
+                </div>
+                <h3>Connect WhatsApp</h3>
+                <p class="text-muted">Scan the QR code to link your device</p>
+            </div>
+
+            <div id="qr-display" class="mb-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+
+            <div id="status-message" class="alert alert-light border mb-4">
+                <i class="fas fa-sync fa-spin me-2 text-primary"></i> Waiting for QR code...
+            </div>
+
+            <a href="/" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function checkStatus() {
+            fetch('/qr_status')
+                .then(response => {
+                    if (response.status === 401) window.location.href = '/login';
+                    return response.json();
+                })
+                .then(data => {
+                    const qrDisplay = document.getElementById('qr-display');
+                    const statusMsg = document.getElementById('status-message');
+
+                    if (data.connected) {
+                        qrDisplay.innerHTML = '<i class="fas fa-check-circle text-success fa-5x"></i>';
+                        statusMsg.className = 'alert alert-success';
+                        statusMsg.innerHTML = '<i class="fas fa-check me-2"></i> Connected Successfully!';
+                        setTimeout(() => window.location.href = '/', 2000);
+                    } else if (data.code) {
+                        qrDisplay.innerHTML = `<img src="data:image/png;base64,${data.code}" class="img-fluid rounded" style="max-width: 250px">`;
+                        statusMsg.className = 'alert alert-info';
+                        statusMsg.innerHTML = '<i class="fas fa-camera me-2"></i> Scan this code with WhatsApp';
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        setInterval(checkStatus, 2000);
+        checkStatus();
+    </script>
+</body>
+
+</html>
