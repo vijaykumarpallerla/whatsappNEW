@@ -18,6 +18,7 @@ from psycopg2.extensions import Binary
 from pathlib import Path
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from neonize.client import NewClient
 from neonize.events import ConnectedEv, MessageEv, PairStatusEv, LoggedOutEv, QREv
 from neonize.types import MessageServerID
@@ -164,6 +165,9 @@ def analyze_message(api_key, text):
 
 # --- FLASK APP SETUP ---
 app = Flask(__name__)
+# Fix for Render (HTTPS/Proxy headers)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
 app.secret_key = "super_secret_key_change_this_in_production"
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
