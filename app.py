@@ -34,12 +34,11 @@ from google.oauth2.credentials import Credentials
 
 # --- CONFIGURATION ---
 # Database Connection
-DB_URL = "postgresql://neondb_owner:npg_Dqx2nsVjg0Ol@ep-flat-sky-ad2jtyax-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+# Check Environment Variable first (Render), else use hardcoded fallback (Local)
+DB_URL = os.environ.get("DATABASE_URL", "postgresql://neondb_owner:npg_Dqx2nsVjg0Ol@ep-flat-sky-ad2jtyax-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
+
 if not DB_URL:
-    # For local testing, you must set this env var or uncomment the line below (TEMPORARILY)
-    # DB_URL = "postgresql://neondb_owner:npg_Dqx2nsVjg0Ol@ep-flat-sky-ad2jtyax-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
     print("CRITICAL ERROR: DATABASE_URL environment variable is not set.")
-    # We won't exit here to allow you to set it, but app will fail on db connection
 
 def get_ist_time():
     try:
