@@ -174,7 +174,13 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 # --- DATA STORAGE PATHS ---
 # For Render (Ephemeral), we store cognitive.db in the current working directory
 APP_FOLDER = os.path.dirname(os.path.abspath(__file__))
-USER_DATA_FOLDER = os.path.join(APP_FOLDER, "whatsapp_sessions")
+
+# On Render, use /tmp for writable session files
+if os.environ.get("RENDER"):
+    USER_DATA_FOLDER = "/tmp/whatsapp_sessions"
+else:
+    USER_DATA_FOLDER = os.path.join(APP_FOLDER, "whatsapp_sessions")
+
 os.makedirs(USER_DATA_FOLDER, exist_ok=True)
 
 # --- GLOBAL MANAGERS ---
