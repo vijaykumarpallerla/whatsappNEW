@@ -673,9 +673,17 @@ def start_bot_for_user(user_id):
                         start_time = time.strptime(config.get("start_time", "09:00"), "%H:%M")
                         end_time = time.strptime(config.get("end_time", "18:00"), "%H:%M")
                         
-                        if start_time <= current_time <= end_time:
-                            should_process = True
+                        if start_time <= end_time:
+                            # Standard Day Shift (e.g., 09:00 to 18:00)
+                            if start_time <= current_time <= end_time:
+                                should_process = True
                         else:
+                            # Cross-Day Night Shift (e.g., 18:30 to 04:00)
+                            # Allow if AFTER start OR BEFORE end
+                            if current_time >= start_time or current_time <= end_time:
+                                should_process = True
+                                
+                        if not should_process:
                             print(f"[User {user_id}] Message skipped: Outside allowed time window ({ist_time_str})")
                     else:
                         print(f"[User {user_id}] Message skipped: Could not fetch IST time")
